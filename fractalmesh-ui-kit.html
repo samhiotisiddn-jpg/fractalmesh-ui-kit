@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!-- FRACTALMESH UI KIT — single-file dark-ops dashboard template.
+     Drop your API base into API below. No build step, no dependencies. -->
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FRACTALMESH CONSOLE</title>
+<style>
+:root{--bg:#05010d;--panel:#0d0620;--purple:#b84dff;--cyan:#39d0ff;--green:#00ff9d;--red:#ff3b6b;--dim:#8b7fb8;--line:#2a1a4a}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:#e6e1f5;font-family:'JetBrains Mono',monospace;font-size:13px}
+canvas{position:fixed;inset:0;z-index:-1;opacity:.3}
+header{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(5,1,13,.9);backdrop-filter:blur(6px)}
+h1{font-size:15px;letter-spacing:2px;color:#fff}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:p 1.6s infinite}
+@keyframes p{50%{opacity:.2}}
+.grid{display:grid;gap:14px;padding:20px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.card h2{font-size:11px;color:var(--dim);letter-spacing:1px;margin-bottom:8px}
+.val{font-size:24px;color:var(--green)}
+.val.warn{color:var(--red)}
+.bar{height:4px;background:var(--line);border-radius:2px;margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--purple),var(--cyan))}
+.log{grid-column:1/-1;font-size:11px;max-height:260px;overflow:auto;white-space:pre-wrap;color:#9d94c4}
+.log .ok{color:var(--green)}.log .err{color:var(--red)}
+table{width:100%;border-collapse:collapse;font-size:11px}
+td,th{border-bottom:1px solid var(--line);padding:6px;text-align:left}
+th{color:var(--dim);font-weight:400}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+<header><span class="dot" id="statusDot"></span><h1>FRACTALMESH CONSOLE</h1><span id="clock" style="margin-left:auto;color:var(--dim)"></span></header>
+<div class="grid">
+  <div class="card"><h2>UPTIME</h2><div class="val" id="up">—</div><div class="bar"><i id="upBar" style="width:0%"></i></div></div>
+  <div class="card"><h2>REQUESTS</h2><div class="val" id="req">—</div><div class="bar"><i id="reqBar" style="width:0%"></i></div></div>
+  <div class="card"><h2>EVENTS</h2><div class="val" id="ev">—</div><div class="bar"><i id="evBar" style="width:0%"></i></div></div>
+  <div class="card"><h2>HEALTH</h2><div class="val" id="hp">—</div></div>
+  <div class="card" style="grid-column:1/-1"><h2>FEED</h2>
+    <table><thead><tr><th>KEY</th><th>VALUE</th></tr></thead><tbody id="kv"></tbody></table>
+  </div>
+  <div class="card log" id="log">[boot] console ready — point API at your backend
+</div>
+</div>
+<script>
+const API=''; // e.g. 'http://localhost:7784' — leave empty for demo mode
+const $=id=>document.getElementById(id);
+setInterval(()=>{$('clock').textContent=new Date().toISOString().slice(11,19)+'Z'},1000);
+function say(m,c){const l=$('log');l.innerHTML+='<span class="'+(c||'')+'">'+m+'</span>\n';l.scrollTop=l.scrollHeight}
+async function poll(){
+ if(!API){$('hp').textContent='DEMO';return}
+ try{
+  const r=await fetch(API+'/api/stats');const j=await r.json();
+  $('statusDot').style.background='var(--green)';
+  $('up').textContent=Math.floor(j.up||0)+'s';
+  const c=j.clicks||{};const total=Object.values(c).reduce((a,b)=>a+b,0);
+  $('req').textContent=total;$('ev').textContent=Object.keys(c).length;$('hp').textContent='LIVE';
+  $('kv').innerHTML=Object.keys(c).map(k=>'<tr><td>'+k+'</td><td>'+c[k]+'</td></tr>').join('')||'<tr><td colspan="2">no events yet</td></tr>';
+ }catch(e){$('statusDot').style.background='var(--red)';$('hp').textContent='DOWN';$('hp').className='val warn';say('[err] poll failed: '+e.message,'err')}
+}
+poll();setInterval(poll,5000);
+const cv=$('fx'),x=cv.getContext('2d');let w,h,ps=[];
+function rs(){w=cv.width=innerWidth;h=cv.height=innerHeight}rs();addEventListener('resize',rs);
+for(let i=0;i<60;i++)ps.push({x:Math.random()*w,y:Math.random()*h,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3});
+(function f(){x.fillStyle='rgba(5,1,13,.3)';x.fillRect(0,0,w,h);x.fillStyle='#b84dff';
+ps.forEach(o=>{o.x+=o.vx;o.y+=o.vy;if(o.x<0||o.x>w)o.vx*=-1;if(o.y<0||o.y>h)o.vy*=-1;x.fillRect(o.x,o.y,2,2)});
+requestAnimationFrame(f)})();
+</script>
+</body>
+</html>
